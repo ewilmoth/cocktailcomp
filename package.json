@@ -1,0 +1,26 @@
+{
+  "name": "woodhamptons-cocktail-competition",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live scoring app for the Woodhamptons Cocktail Competition",
+  "type": "module",
+  "scripts": {
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "npm run dev --prefix client",
+    "dev": "concurrently -n server,client -c green,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "build": "npm install --prefix client && npm run build --prefix client",
+    "start": "node server/index.js",
+    "seed-admin": "node server/seed-admin.js",
+    "install:all": "npm install && npm install --prefix client"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "nodemailer": "^6.9.15"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
