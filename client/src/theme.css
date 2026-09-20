@@ -399,6 +399,20 @@ table.lb tr:first-child td {
   border-radius: 8px;
 }
 
+.met-gala-figures-frame {
+  width: 100%;
+  max-width: 420px;
+  height: 150px;
+  margin: 4px auto 0;
+  overflow: hidden;
+}
+
+.met-gala-figures {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .ios-help-card {
   position: fixed;
   left: 16px;
