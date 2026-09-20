@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import AddToHomeScreen from '../components/AddToHomeScreen.jsx';
-import MetGalaFigures from '../components/MetGalaFigures.jsx';
 
 export default function RequestLink({ expiredError }) {
   const [email, setEmail] = useState('');
@@ -25,10 +24,6 @@ export default function RequestLink({ expiredError }) {
 
   return (
     <div className="main">
-      <div className="met-gala-figures-frame">
-        <MetGalaFigures className="met-gala-figures" />
-      </div>
-
       <div className="center-stage">
         <div className="eyebrow">Woodhamptons Presents</div>
         <h1 className="headline">The Cocktail Competition</h1>
