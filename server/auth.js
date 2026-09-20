@@ -22,6 +22,21 @@ export function createLoginToken(userId) {
   return token;
 }
 
+// Validates a token without marking it used. Used to safely show a
+// confirmation page for a GET request, since email security scanners
+// automatically visit links in incoming mail — if the plain GET consumed
+// the token, the real user's click would find it already "used."
+export function peekLoginToken(token) {
+  if (!token) return null;
+  const row = db
+    .prepare('SELECT * FROM login_tokens WHERE token_hash = ?')
+    .get(hashToken(token));
+  if (!row) return null;
+  if (row.used_at) return null;
+  if (new Date(row.expires_at).getTime() < Date.now()) return null;
+  return row;
+}
+
 export function consumeLoginToken(token) {
   const row = db
     .prepare('SELECT * FROM login_tokens WHERE token_hash = ?')

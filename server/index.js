@@ -16,6 +16,7 @@ const clientDist = path.join(__dirname, '..', 'client', 'dist');
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(attachUser);
 
