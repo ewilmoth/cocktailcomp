@@ -62,6 +62,49 @@ router.post('/users', async (req, res) => {
   res.status(201).json({ user: publicUser(user) });
 });
 
+router.delete('/users/:id', (req, res) => {
+  const userId = Number(req.params.id);
+  if (userId === req.user.id) {
+    return res.status(400).json({ error: "You can't remove yourself" });
+  }
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const competition = getCompetition();
+  const order = getRunningOrder(competition);
+  const removedIndex = order.indexOf(userId);
+
+  if (competition.status === 'in_progress' && removedIndex === competition.current_index) {
+    return res.status(409).json({
+      error: 'Cannot remove the contestant currently up. Advance past them first.',
+    });
+  }
+
+  db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+  const newOrder = order.filter((id) => id !== userId);
+  let currentIndex = competition.current_index;
+  if (removedIndex !== -1 && removedIndex < currentIndex) {
+    currentIndex -= 1;
+  }
+  updateCompetition({ running_order: JSON.stringify(newOrder), current_index: currentIndex });
+
+  res.json({ ok: true });
+});
+
+router.post('/reset', (req, res) => {
+  db.prepare('DELETE FROM scores').run();
+  const updated = updateCompetition({
+    status: 'setup',
+    running_order: '[]',
+    current_index: 0,
+    current_phase: 'prep',
+  });
+  res.json({ competition: updated });
+});
+
 router.put('/running-order', (req, res) => {
   const competition = getCompetition();
   if (competition.status !== 'setup') {

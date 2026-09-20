@@ -5,7 +5,7 @@ function emptyForm() {
   return { firstName: '', lastName: '', nickname: '', email: '', isAdmin: false };
 }
 
-export default function AdminPanel() {
+export default function AdminPanel({ onNavigateHome }) {
   const [users, setUsers] = useState(null);
   const [competition, setCompetition] = useState(null);
   const [form, setForm] = useState(emptyForm());
@@ -64,6 +64,7 @@ export default function AdminPanel() {
     try {
       await api.adminStart();
       await refresh();
+      onNavigateHome?.();
     } catch (err) {
       setError(err.message);
     }
@@ -75,6 +76,7 @@ export default function AdminPanel() {
     try {
       await api.adminForceAdvance();
       await refresh();
+      onNavigateHome?.();
     } catch (err) {
       setError(err.message);
     }
@@ -85,7 +87,41 @@ export default function AdminPanel() {
     setError(null);
     try {
       await api.adminPublish();
-      setNotice('Results published!');
+      await refresh();
+      onNavigateHome?.();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function removeUser(u) {
+    if (
+      !confirm(
+        `Remove ${u.nickname} from the competition?\n\nThis deletes their account and any scores they gave or received. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    try {
+      await api.adminRemoveUser(u.id);
+      await refresh();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function resetCompetition() {
+    const warning =
+      "This will permanently delete every score anyone has submitted and put the competition back to Setup.\n\n" +
+      "Contestants stay on the roster, but the running order will be cleared and everyone starts fresh.\n\n" +
+      'This cannot be undone. Are you absolutely sure?';
+    if (!confirm(warning)) return;
+    setError(null);
+    setNotice(null);
+    try {
+      await api.adminReset();
+      setNotice('Competition has been reset.');
       await refresh();
     } catch (err) {
       setError(err.message);
@@ -184,8 +220,26 @@ export default function AdminPanel() {
         {users?.map((u) => (
           <div className="roster-item" key={u.id}>
             <span>{u.firstName} "{u.nickname}" {u.lastName}{u.isAdmin && <span className="badge">Admin</span>}</span>
+            <button
+              className="btn danger"
+              style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
+              onClick={() => removeUser(u)}
+            >
+              Remove
+            </button>
           </div>
         ))}
+      </div>
+
+      <div className="card">
+        <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--danger)' }}>Danger Zone</div>
+        <div className="subtext" style={{ marginBottom: 14 }}>
+          Resetting wipes every submitted score and puts the competition back to Setup. Contestants stay on
+          the roster, but you'll need to set the running order again. This cannot be undone.
+        </div>
+        <button className="btn danger" onClick={resetCompetition}>
+          Reset Competition
+        </button>
       </div>
     </div>
   );

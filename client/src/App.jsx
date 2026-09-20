@@ -59,7 +59,16 @@ export default function App() {
 
   let content;
   if (page === 'myscores') content = <MyScores />;
-  else if (page === 'admin' && user.isAdmin) content = <AdminPanel />;
+  else if (page === 'admin' && user.isAdmin) {
+    content = (
+      <AdminPanel
+        onNavigateHome={() => {
+          setPage('home');
+          refresh();
+        }}
+      />
+    );
+  }
   else if (page === 'leaderboard' && user.isAdmin) content = <Leaderboard />;
   else content = <Home state={state} onNavigate={setPage} onRefresh={refresh} />;
 
