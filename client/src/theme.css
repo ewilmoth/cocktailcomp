@@ -398,3 +398,48 @@ table.lb tr:first-child td {
   height: 32px;
   border-radius: 8px;
 }
+
+.ios-help-card {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(24px + var(--safe-bottom));
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  padding: 22px 20px;
+  z-index: 32;
+}
+
+.ios-help-steps {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ios-help-steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.ios-help-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  color: var(--gold-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

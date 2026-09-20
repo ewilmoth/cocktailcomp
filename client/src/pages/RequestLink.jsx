@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
+import AddToHomeScreen from '../components/AddToHomeScreen.jsx';
 
 export default function RequestLink({ expiredError }) {
   const [email, setEmail] = useState('');
@@ -38,7 +39,10 @@ export default function RequestLink({ expiredError }) {
           <div className="success-banner">
             Check your inbox! We've sent a login link to <strong>{email}</strong>.
           </div>
-          <div className="subtext">Open it on this phone and you'll be logged in from here on out.</div>
+          <div className="subtext" style={{ marginBottom: 16 }}>
+            Open it on this phone and you'll be logged in from here on out.
+          </div>
+          <AddToHomeScreen className="btn secondary">Add to Home Screen</AddToHomeScreen>
         </div>
       ) : (
         <form className="card" onSubmit={onSubmit}>

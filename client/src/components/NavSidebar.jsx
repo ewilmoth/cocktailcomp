@@ -1,3 +1,5 @@
+import AddToHomeScreen from './AddToHomeScreen.jsx';
+
 export default function NavSidebar({ open, onClose, user, page, onNavigate, onLogout, showFinalScoresBadge }) {
   if (!open) return null;
 
@@ -20,6 +22,7 @@ export default function NavSidebar({ open, onClose, user, page, onNavigate, onLo
         <button className={`sidebar-link${page === 'myscores' ? ' gold' : ''}`} onClick={() => go('myscores')}>
           My Scores
         </button>
+        <AddToHomeScreen className="sidebar-link">📲 Add to Home Screen</AddToHomeScreen>
 
         {user.isAdmin && (
           <>
