@@ -8,6 +8,7 @@ export default function NavSidebar({
   page,
   onNavigate,
   onLogout,
+  onSwitch,
   showFinalScoresBadge,
 }) {
   if (!open) return null;
@@ -47,6 +48,17 @@ export default function NavSidebar({
             >
               Cumulative Scores{showFinalScoresBadge ? ' •' : ''}
             </button>
+            {joined && (
+              <button
+                className="sidebar-link"
+                onClick={() => {
+                  onSwitch();
+                  onClose();
+                }}
+              >
+                Switch Competition
+              </button>
+            )}
           </>
         )}
 

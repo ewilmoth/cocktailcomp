@@ -101,6 +101,9 @@ export default function App() {
         onJoined={onJoined}
         onNavigate={setPage}
         onCancel={joiningAnother ? () => setJoiningAnother(false) : null}
+        leavingUnfinished={
+          joined && (state?.status === 'in_progress' || state?.status === 'judging_complete')
+        }
       />
     );
   } else if (page === 'myscores') {
@@ -131,6 +134,10 @@ export default function App() {
         page={page}
         onNavigate={setPage}
         onLogout={logout}
+        onSwitch={() => {
+          setJoiningAnother(true);
+          setPage('home');
+        }}
         showFinalScoresBadge={showFinalScoresBadge}
       />
 

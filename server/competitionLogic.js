@@ -93,12 +93,17 @@ export function removeMember(competitionId, userId) {
     userId
   );
 
+  const newOrder = order.filter((id) => id !== userId);
   let currentIndex = competition.current_index;
   if (removedIndex !== -1 && removedIndex < currentIndex) currentIndex -= 1;
-  updateCompetition(competitionId, {
-    running_order: JSON.stringify(order.filter((id) => id !== userId)),
-    current_index: currentIndex,
-  });
+  const fields = { running_order: JSON.stringify(newOrder), current_index: currentIndex };
+
+  // Removing whoever is up hands the turn to the next person, starting from prep.
+  if (competition.status === 'in_progress' && removedIndex === competition.current_index) {
+    fields.current_phase = 'prep';
+    if (currentIndex >= newOrder.length) fields.status = 'judging_complete';
+  }
+  updateCompetition(competitionId, fields);
 
   // The departing judge may have been the last one this round was waiting on.
   return maybeAdvance(competitionId);

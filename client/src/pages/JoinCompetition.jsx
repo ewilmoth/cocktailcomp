@@ -4,7 +4,7 @@ import AddToHomeScreen from '../components/AddToHomeScreen.jsx';
 
 const POLL_MS = 5000;
 
-export default function JoinCompetition({ user, onJoined, onNavigate, onCancel }) {
+export default function JoinCompetition({ user, onJoined, onNavigate, onCancel, leavingUnfinished }) {
   const [form, setForm] = useState({
     firstName: user.firstName || '',
     lastName: user.lastName || '',
@@ -40,6 +40,16 @@ export default function JoinCompetition({ user, onJoined, onNavigate, onCancel }
 
   async function onSubmit(e) {
     e.preventDefault();
+    if (
+      leavingUnfinished &&
+      !confirm(
+        `Leave ${user.competitionName}?\n\n` +
+          'It is still under way. You will be taken out of its running order and any scores you gave or ' +
+          'received in it will be deleted. This cannot be undone.'
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -105,12 +115,18 @@ export default function JoinCompetition({ user, onJoined, onNavigate, onCancel }
           )}
         </div>
 
+        {leavingUnfinished && (
+          <div className="error-banner">
+            {user.competitionName} is still under way. Switching takes you out of it and deletes your scores in
+            it.
+          </div>
+        )}
         <button className="btn" type="submit" disabled={busy || !competitionId}>
           {busy ? 'Joining…' : 'Join Competition'}
         </button>
         {onCancel && (
           <button type="button" className="btn secondary" style={{ marginTop: 10 }} onClick={onCancel}>
-            Back to results
+            Back to {user.competitionName}
           </button>
         )}
       </form>

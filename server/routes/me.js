@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, getCompetition } from '../db.js';
 import { requireAuth } from '../auth.js';
-import { addMember, getRunningOrder } from '../competitionLogic.js';
+import { addMember, getRunningOrder, removeMember } from '../competitionLogic.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -37,18 +37,21 @@ router.post('/join', (req, res) => {
   }
 
   const previous = req.user.competition_id ? getCompetition(req.user.competition_id) : null;
-  if (previous && previous.id !== competitionId) {
-    if (previous.status === 'in_progress' || previous.status === 'judging_complete') {
-      return res.status(409).json({ error: "You're in a competition that's still under way" });
-    }
+  const leaving = previous && previous.id !== competitionId ? previous : null;
+  const leavingUnfinished = leaving && (leaving.status === 'in_progress' || leaving.status === 'judging_complete');
+  // Players can't walk out of a live round; admins can, as if removed from it.
+  if (leavingUnfinished && !req.isAdmin) {
+    return res.status(409).json({ error: "You're in a competition that's still under way" });
   }
 
   db.transaction(() => {
-    // Switching before the old one starts takes you off its roster; leaving a
-    // finished one keeps you in its results.
-    if (previous && previous.id !== competitionId && previous.status === 'setup') {
-      const order = getRunningOrder(previous).filter((id) => id !== req.user.id);
-      db.prepare('UPDATE competitions SET running_order = ? WHERE id = ?').run(JSON.stringify(order), previous.id);
+    // Leaving one that hasn't started, or one still running, takes you off its
+    // roster; leaving a finished one keeps you in its results.
+    if (leavingUnfinished) {
+      removeMember(leaving.id, req.user.id);
+    } else if (leaving?.status === 'setup') {
+      const order = getRunningOrder(leaving).filter((id) => id !== req.user.id);
+      db.prepare('UPDATE competitions SET running_order = ? WHERE id = ?').run(JSON.stringify(order), leaving.id);
     }
     db.prepare(
       'UPDATE users SET first_name = ?, last_name = ?, nickname = ?, competition_id = ? WHERE id = ?'
