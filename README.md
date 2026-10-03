@@ -1,7 +1,7 @@
 # Woodhamptons Cocktail Competition
 
 A mobile-friendly live scoring app for the Woodhamptons Cocktail Competition (Met Gala themed). Contestants
-get scored on Cocktail, Costume and Table Setting by everyone else competing, one contestant at a time,
+get scored on Cocktail Flavour, Costume and Presentation by everyone else competing, one contestant at a time,
 with an admin controlling the pace from their phone.
 
 ## How it works

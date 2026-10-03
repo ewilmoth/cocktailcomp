@@ -62,10 +62,10 @@ export default function Scoring({ state, onSubmitted }) {
 
       <div className="card">
         {error && <div className="error-banner">{error}</div>}
-        <ScoreChips label="Cocktail" value={cocktail} onChange={(v) => updateAndSaveDraft({ cocktail: v })} />
+        <ScoreChips label="Cocktail Flavour" value={cocktail} onChange={(v) => updateAndSaveDraft({ cocktail: v })} />
         <ScoreChips label="Costume" value={costume} onChange={(v) => updateAndSaveDraft({ costume: v })} />
         <ScoreChips
-          label="Table Setting"
+          label="Presentation"
           value={tableSetting}
           onChange={(v) => updateAndSaveDraft({ tableSetting: v })}
         />

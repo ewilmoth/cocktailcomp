@@ -78,7 +78,7 @@ router.post('/submit', (req, res) => {
 
   const { cocktail, costume, tableSetting, comments } = req.body || {};
   if (![cocktail, costume, tableSetting].every(isValidScoreValue)) {
-    return res.status(400).json({ error: 'Cocktail, costume and table setting scores must be whole numbers 0-10' });
+    return res.status(400).json({ error: 'Cocktail flavour, costume and presentation scores must be whole numbers 0-10' });
   }
 
   db.prepare(UPSERT).run({

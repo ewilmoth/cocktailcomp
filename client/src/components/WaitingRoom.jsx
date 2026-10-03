@@ -11,7 +11,7 @@ export default function WaitingRoom({ state }) {
           <>
             <div className="eyebrow">Being Judged</div>
             <h1 className="headline">Relax, you're being judged ✨</h1>
-            <div className="subtext">The judges are scoring your cocktail, costume and table setting right now.</div>
+            <div className="subtext">The judges are scoring your cocktail flavour, costume and presentation right now.</div>
           </>
         ) : (
           <>

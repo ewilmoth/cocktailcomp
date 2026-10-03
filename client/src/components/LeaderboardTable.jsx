@@ -5,21 +5,22 @@ export default function LeaderboardTable({ leaderboard }) {
         <tr>
           <th>Rank</th>
           <th>Name</th>
-          <th>Cocktail</th>
-          <th>Costume</th>
-          <th>Table</th>
-          <th>Total</th>
+          <th className="num">Total</th>
         </tr>
       </thead>
       <tbody>
         {leaderboard.map((row, i) => (
           <tr key={row.id}>
             <td>{i + 1}</td>
-            <td>{row.nickname}</td>
-            <td>{row.cocktail}</td>
-            <td>{row.costume}</td>
-            <td>{row.tableSetting}</td>
-            <td>{row.total}</td>
+            <td>
+              {row.nickname}
+              <div className="lb-breakdown">
+                <span>Cocktail Flavour {row.cocktail}</span>
+                <span>Costume {row.costume}</span>
+                <span>Presentation {row.tableSetting}</span>
+              </div>
+            </td>
+            <td className="num">{row.total}</td>
           </tr>
         ))}
       </tbody>

@@ -30,7 +30,7 @@ export default function MyScores() {
             <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{s.total} / 30</span>
           </div>
           <div className="subtext" style={{ margin: '8px 0' }}>
-            Cocktail {s.cocktail} &middot; Costume {s.costume} &middot; Table Setting {s.tableSetting}
+            Cocktail Flavour {s.cocktail} &middot; Costume {s.costume} &middot; Presentation {s.tableSetting}
           </div>
           {s.comments && <div style={{ fontStyle: 'italic', color: 'var(--text-dim)' }}>&ldquo;{s.comments}&rdquo;</div>}
         </div>

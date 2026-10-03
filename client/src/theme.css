@@ -355,6 +355,24 @@ table.lb tr:first-child td {
   font-size: 16px;
 }
 
+table.lb .num {
+  text-align: right;
+}
+
+.lb-breakdown {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-dim);
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+}
+
+.lb-breakdown span {
+  white-space: nowrap;
+}
+
 .roster-item {
   display: flex;
   justify-content: space-between;
