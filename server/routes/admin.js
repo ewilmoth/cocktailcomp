@@ -153,6 +153,13 @@ router.post('/competitions/:id/reset', (req, res) => {
   res.json({ competition: summary(updated) });
 });
 
+// Members fall back to the picker (users.competition_id is ON DELETE SET NULL)
+// and the competition's scores go with it (ON DELETE CASCADE).
+router.delete('/competitions/:id', (req, res) => {
+  db.prepare('DELETE FROM competitions WHERE id = ?').run(req.competition.id);
+  res.json({ ok: true });
+});
+
 router.delete('/competitions/:id/members/:userId', (req, res) => {
   const c = req.competition;
   const userId = Number(req.params.userId);

@@ -49,5 +49,6 @@ export const api = {
   adminLeaderboard: (id) => request(`${comp(id)}/leaderboard`),
   adminPublish: (id) => post(`${comp(id)}/publish`),
   adminReset: (id) => post(`${comp(id)}/reset`),
+  adminDeleteCompetition: (id) => request(comp(id), { method: 'DELETE' }),
   adminRemoveMember: (id, userId) => request(`${comp(id)}/members/${userId}`, { method: 'DELETE' }),
 };

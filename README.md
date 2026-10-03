@@ -16,6 +16,9 @@ with an admin controlling the pace from their phone.
   dropdown as everyone else.
 - Admins can reorder the running order (up/down arrows, or **Randomize Order** for a digital "draw from a
   hat"), remove people, and reset a competition.
+- People can't leave a competition that's under way, so nobody drops out of a live round by accident. To
+  clear out an old or test competition, an admin uses **Delete Competition** (Admin Panel → Danger Zone):
+  everyone in it goes back to the competition picker and its scores are deleted.
 - Once started, each contestant gets a turn: everyone sees "*\<Name\> is up next*" while the contestant
   preps; the admin taps **Start Scoring** when ready, which opens the scoring form for everyone except that
   contestant. A checklist shows every judge with a tick once they've submitted, so the room can see who

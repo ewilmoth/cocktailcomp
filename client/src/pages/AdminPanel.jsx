@@ -81,6 +81,25 @@ export default function AdminPanel({ user, onNavigateHome }) {
     }
   }
 
+  async function deleteCompetition(comp) {
+    const warning =
+      `Permanently delete ${comp.name}?\n\n` +
+      'Everyone in it is sent back to the competition picker, and all of its scores are deleted.\n\n' +
+      'This cannot be undone.';
+    if (!confirm(warning)) return;
+    setError(null);
+    setNotice(null);
+    try {
+      await api.adminDeleteCompetition(comp.id);
+      setSelectedId(null);
+      await loadCompetitions();
+      setNotice(`Deleted "${comp.name}".`);
+      if (user.competitionId === comp.id) onNavigateHome?.();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   function move(idx, dir) {
     const order = [...detail.competition.runningOrder];
     const j = idx + dir;
@@ -272,6 +291,14 @@ export default function AdminPanel({ user, onNavigateHome }) {
               }
             >
               Reset Competition
+            </button>
+            <div className="subtext" style={{ margin: '20px 0 14px' }}>
+              Deleting removes {c.name} entirely, including its scores. Everyone in it goes back to the
+              competition picker so they can join a different one. Use this to clear out old or test
+              competitions.
+            </div>
+            <button className="btn danger" onClick={() => deleteCompetition(c)}>
+              Delete Competition
             </button>
           </div>
         </>
