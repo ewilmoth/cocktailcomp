@@ -1,3 +1,11 @@
+export class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message);
+    this.status = status;
+    this.data = data;
+  }
+}
+
 async function request(path, options = {}) {
   const res = await fetch(`/api${path}`, {
     credentials: 'include',
@@ -7,33 +15,39 @@ async function request(path, options = {}) {
   const isJson = res.headers.get('content-type')?.includes('application/json');
   const data = isJson ? await res.json() : null;
   if (!res.ok) {
-    throw new Error(data?.error || `Request failed (${res.status})`);
+    throw new ApiError(data?.error || `Request failed (${res.status})`, res.status, data);
   }
   return data;
 }
 
+const post = (path, body) => request(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
+const comp = (id) => `/admin/competitions/${id}`;
+
 export const api = {
   me: () => request('/auth/me'),
-  requestLink: (email) => request('/auth/request-link', { method: 'POST', body: JSON.stringify({ email }) }),
-  logout: () => request('/auth/logout', { method: 'POST' }),
+  login: (email, password) => post('/auth/login', { email, password }),
+  logout: () => post('/auth/logout'),
+
+  openCompetitions: () => request('/me/open-competitions'),
+  join: (payload) => post('/me/join', payload),
 
   state: () => request('/competition/state'),
   results: () => request('/competition/results'),
 
   scoreDraft: (payload) => request('/scores/draft', { method: 'PATCH', body: JSON.stringify(payload) }),
-  scoreSubmit: (payload) => request('/scores/submit', { method: 'POST', body: JSON.stringify(payload) }),
+  scoreSubmit: (payload) => post('/scores/submit', payload),
   myScores: () => request('/scores/mine'),
 
-  adminCompetition: () => request('/admin/competition'),
-  adminUsers: () => request('/admin/users'),
-  adminCreateUser: (payload) => request('/admin/users', { method: 'POST', body: JSON.stringify(payload) }),
-  adminRemoveUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
-  adminReset: () => request('/admin/reset', { method: 'POST' }),
-  adminSetOrder: (order) => request('/admin/running-order', { method: 'PUT', body: JSON.stringify({ order }) }),
-  adminRandomizeOrder: () => request('/admin/randomize-order', { method: 'POST' }),
-  adminStart: () => request('/admin/start', { method: 'POST' }),
-  adminStartScoring: () => request('/admin/start-scoring', { method: 'POST' }),
-  adminForceAdvance: () => request('/admin/force-advance', { method: 'POST' }),
-  adminLeaderboard: () => request('/admin/leaderboard'),
-  adminPublish: () => request('/admin/publish', { method: 'POST' }),
+  adminCompetitions: () => request('/admin/competitions'),
+  adminCreateCompetition: (name) => post('/admin/competitions', { name }),
+  adminCompetition: (id) => request(comp(id)),
+  adminSetOrder: (id, order) => request(`${comp(id)}/running-order`, { method: 'PUT', body: JSON.stringify({ order }) }),
+  adminRandomizeOrder: (id) => post(`${comp(id)}/randomize-order`),
+  adminStart: (id) => post(`${comp(id)}/start`),
+  adminStartScoring: (id) => post(`${comp(id)}/start-scoring`),
+  adminForceAdvance: (id, expectedIndex) => post(`${comp(id)}/force-advance`, { expectedIndex }),
+  adminLeaderboard: (id) => request(`${comp(id)}/leaderboard`),
+  adminPublish: (id) => post(`${comp(id)}/publish`),
+  adminReset: (id) => post(`${comp(id)}/reset`),
+  adminRemoveMember: (id, userId) => request(`${comp(id)}/members/${userId}`, { method: 'DELETE' }),
 };

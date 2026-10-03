@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import ScoreChips from './ScoreChips.jsx';
+import JudgeChecklist from './JudgeChecklist.jsx';
 
 export default function Scoring({ state, onSubmitted }) {
   const name = state.currentContestant?.nickname || 'this contestant';
@@ -88,6 +89,7 @@ export default function Scoring({ state, onSubmitted }) {
           </div>
         )}
       </div>
+      <JudgeChecklist judges={state.judges} />
     </div>
   );
 }

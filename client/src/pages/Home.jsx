@@ -3,26 +3,41 @@ import Scoring from '../components/Scoring.jsx';
 import WaitingRoom from '../components/WaitingRoom.jsx';
 import FinalResults from './FinalResults.jsx';
 
-export default function Home({ state, onNavigate, onRefresh }) {
+export default function Home({ state, onNavigate, onRefresh, onJoinAnother }) {
   if (!state) {
     return <div className="subtext">Loading…</div>;
   }
 
   if (state.status === 'setup') {
     return (
-      <div className="center-stage">
-        <div className="eyebrow">Woodhamptons</div>
-        <h1 className="headline">Getting Ready</h1>
-        <div className="subtext">
-          {state.isAdmin
-            ? `${state.contestantCount} contestant${state.contestantCount === 1 ? '' : 's'} invited so far. Head to the Admin Panel to add more and set the running order.`
-            : "The competition hasn't started yet — sit tight, darling."}
+      <div>
+        <div className="center-stage" style={{ minHeight: '36vh' }}>
+          <div className="eyebrow">{state.competitionName}</div>
+          <h1 className="headline">Getting Ready</h1>
+          <div className="subtext">
+            {state.isAdmin
+              ? 'Start the competition from the Admin Panel once everyone has joined.'
+              : "The competition hasn't started yet — sit tight, darling."}
+          </div>
+          {state.isAdmin && (
+            <button className="btn" style={{ width: 'auto' }} onClick={() => onNavigate('admin')}>
+              Go to Admin Panel
+            </button>
+          )}
         </div>
-        {state.isAdmin && (
-          <button className="btn" style={{ width: 'auto' }} onClick={() => onNavigate('admin')}>
-            Go to Admin Panel
-          </button>
-        )}
+        <div className="card">
+          <div className="judge-checklist-header">
+            <span>On the guest list</span>
+            <span>{state.members.length}</span>
+          </div>
+          {state.members.map((m) => (
+            <div className="roster-item" key={m.id}>
+              <span>
+                {m.firstName} {m.lastName} <span className="subtext">&ldquo;{m.nickname}&rdquo;</span>
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -63,7 +78,14 @@ export default function Home({ state, onNavigate, onRefresh }) {
   }
 
   if (state.status === 'results_published') {
-    return <FinalResults />;
+    return (
+      <div>
+        <FinalResults />
+        <button className="btn secondary" onClick={onJoinAnother}>
+          Join another competition
+        </button>
+      </div>
+    );
   }
 
   return null;

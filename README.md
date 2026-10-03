@@ -6,13 +6,21 @@ with an admin controlling the pace from their phone.
 
 ## How it works
 
-- **Admins** (Edward, and Keiran/David once added) create contestants from the Admin Panel. Creating a
-  contestant immediately emails them a magic login link — no passwords.
-- Admins set the running order (drag with the up/down arrows, or tap **Randomize Order** to do a digital
-  "draw from a hat").
+- An **admin** creates a competition by name in the Admin Panel, then shares the link.
+- **Anyone with the link** types their email and taps **Log in** (no emails are sent). First time in, they
+  enter their first name, surname and nickname and pick a competition from the dropdown. Only competitions
+  that haven't started yet are listed. After that, typing the same email (or just reopening the site) takes
+  them straight back into their game.
+- Admin accounts are the emails listed in `ADMIN_EMAILS`, and they also need `ADMIN_PASSWORD` to log in, so
+  nobody can get admin just by typing an admin's email. Admins join a competition through the same
+  dropdown as everyone else.
+- Admins can reorder the running order (up/down arrows, or **Randomize Order** for a digital "draw from a
+  hat"), remove people, and reset a competition.
 - Once started, each contestant gets a turn: everyone sees "*\<Name\> is up next*" while the contestant
   preps; the admin taps **Start Scoring** when ready, which opens the scoring form for everyone except that
-  contestant. Once every other contestant has submitted, the app automatically moves on to the next person.
+  contestant. A checklist shows every judge with a tick once they've submitted, so the room can see who
+  it's waiting on. Once every other contestant has submitted, the app automatically moves on to the next
+  person.
 - Everyone can close the app/phone browser at any point and reopen it later — they'll land back exactly
   where they left off, including any half-finished score (it autosaves as you tap).
 - Contestants can only ever see the scores *they* gave (My Scores). Admins get a hidden **Cumulative
@@ -26,8 +34,8 @@ with an admin controlling the pace from their phone.
 - Node.js + Express (single process) serving both the API and the built React app
 - SQLite (`better-sqlite3`) — a single file database, easy to back up
 - React + Vite for the frontend
-- Nodemailer via Gmail SMTP for invite/login/results emails
-- No accounts/passwords — magic link + long-lived session cookies
+- Nodemailer via Gmail SMTP for the final results email
+- Email-only login with long-lived session cookies; admins also need a shared password
 
 ## Local development
 
@@ -36,28 +44,24 @@ Requires Node.js 20+.
 ```bash
 npm run install:all      # installs both server and client dependencies
 cp .env.example .env     # fill in the values described below
-npm run seed-admin       # creates you as the first admin, using ADMIN_* vars from .env
 npm run dev               # runs the API (port 3000) and Vite dev server (port 5173) together
 ```
 
-Open http://localhost:5173, request a login link for your admin email, and (since `GMAIL_APP_PASSWORD` is
-blank by default) the link will be printed to the server's terminal output instead of emailed — copy/paste
-it into your browser to log in.
+Open http://localhost:5173 and log in with an email from `ADMIN_EMAILS` plus `ADMIN_PASSWORD`.
 
 ### Environment variables (`.env`)
 
 | Variable | Purpose |
 | --- | --- |
 | `PORT` | Port the Node server listens on (default 3000) |
-| `PUBLIC_URL` | The externally-reachable URL of the app (used to build links in emails) — e.g. `https://woodhamptons.wilmoth.cc` |
-| `SESSION_SECRET` | Any long random string |
 | `DB_PATH` | Where the SQLite file lives (default `./data/woodhamptons.db`) |
-| `GMAIL_USER` | The Gmail address emails are sent from |
+| `ADMIN_EMAILS` | Comma-separated list of admin emails, e.g. `ewilmoth@gmail.com,keiran@example.com` |
+| `ADMIN_PASSWORD` | Shared password every admin email must enter to log in. Admin login is refused if it's blank |
+| `GMAIL_USER` | The Gmail address the results email is sent from |
 | `GMAIL_APP_PASSWORD` | A [Google App Password](https://myaccount.google.com/apppasswords) for that account (not your normal password — you'll need 2-Step Verification turned on to generate one) |
-| `ADMIN_FIRST_NAME` / `ADMIN_LAST_NAME` / `ADMIN_NICKNAME` / `ADMIN_EMAIL` | Used once by `npm run seed-admin` to create the first admin account |
 
-Leave `GMAIL_USER`/`GMAIL_APP_PASSWORD` blank to run in "dev mode", where emails are printed to the console
-instead of sent — handy for testing without spamming real inboxes.
+Leave `GMAIL_USER`/`GMAIL_APP_PASSWORD` blank to run in "dev mode", where the results email is printed to the
+console instead of sent — handy for testing without spamming real inboxes.
 
 ## Deploying on your Windows home server
 
@@ -72,16 +76,13 @@ opening PowerShell and running `node --version`.
 git clone <your-repo-url> C:\woodhamptons
 cd C:\woodhamptons
 copy .env.example .env
-notepad .env   # fill in PUBLIC_URL, SESSION_SECRET, GMAIL_USER, GMAIL_APP_PASSWORD, ADMIN_*
+notepad .env   # fill in ADMIN_EMAILS, ADMIN_PASSWORD, GMAIL_USER, GMAIL_APP_PASSWORD
 npm run install:all
 npm run build
-npm run seed-admin
 ```
 
 `npm run build` compiles the React app into `client/dist`; the Node server serves it directly, so this is
-the only build step you need. `PUBLIC_URL` should already be set to `https://woodhamptons.wilmoth.cc` (see
-step 4) before you run `seed-admin`/`build`, since it's baked into email links at send time, not build time
-— so it's fine to update `.env` later too.
+the only build step you need. Database changes are applied automatically when the server starts.
 
 Test it runs: `npm start`, then visit `http://localhost:3000` from the same machine. Stop it with Ctrl+C
 once you've confirmed it works — the next steps make it run permanently as a service.
@@ -152,9 +153,14 @@ just manually copying it before and after the night.
 
 ## Adding Keiran and David as admins
 
-Once you have their email addresses, add them the normal way: Admin Panel → Add Contestant, filling in their
-details and ticking **Make this person an admin**. They'll get the same invite email and magic link as any
-contestant, just with admin access once logged in.
+Add their emails to `ADMIN_EMAILS` in `C:\woodhamptons\.env`, comma-separated, then restart the service:
+
+```powershell
+Restart-Service Woodhamptons
+```
+
+Give them `ADMIN_PASSWORD`. Removing an email from the list and restarting takes admin away straight away,
+even from someone who's already logged in.
 
 ## Notes / things you can easily change later
 

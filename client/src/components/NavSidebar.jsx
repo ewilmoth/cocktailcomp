@@ -1,6 +1,15 @@
 import AddToHomeScreen from './AddToHomeScreen.jsx';
 
-export default function NavSidebar({ open, onClose, user, page, onNavigate, onLogout, showFinalScoresBadge }) {
+export default function NavSidebar({
+  open,
+  onClose,
+  user,
+  joined,
+  page,
+  onNavigate,
+  onLogout,
+  showFinalScoresBadge,
+}) {
   if (!open) return null;
 
   function go(p) {
@@ -13,15 +22,17 @@ export default function NavSidebar({ open, onClose, user, page, onNavigate, onLo
       <div className="sidebar-overlay" onClick={onClose} />
       <div className="sidebar">
         <div className="brand" style={{ marginBottom: 12 }}>
-          {user.nickname}
+          {user.nickname || user.email}
           <small>{user.isAdmin ? 'Admin' : 'Contestant'}</small>
         </div>
         <button className={`sidebar-link${page === 'home' ? ' gold' : ''}`} onClick={() => go('home')}>
           Home
         </button>
-        <button className={`sidebar-link${page === 'myscores' ? ' gold' : ''}`} onClick={() => go('myscores')}>
-          My Scores
-        </button>
+        {joined && (
+          <button className={`sidebar-link${page === 'myscores' ? ' gold' : ''}`} onClick={() => go('myscores')}>
+            My Scores
+          </button>
+        )}
         <AddToHomeScreen className="sidebar-link">📲 Add to Home Screen</AddToHomeScreen>
 
         {user.isAdmin && (

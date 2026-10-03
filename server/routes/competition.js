@@ -1,72 +1,66 @@
 import { Router } from 'express';
-import { db, getCompetition } from '../db.js';
+import { db } from '../db.js';
 import { requireAuth } from '../auth.js';
 import {
+  requireJoinedCompetition,
   getRunningOrder,
   getCurrentContestantId,
   eligibleJudgeIds,
-  submittedJudgeCount,
+  submittedJudgeIds,
+  getUsersByIds,
   computeLeaderboard,
 } from '../competitionLogic.js';
 
 const router = Router();
-router.use(requireAuth);
+router.use(requireAuth, requireJoinedCompetition);
 
-function getUserBrief(id) {
-  if (id == null) return null;
-  const u = db.prepare('SELECT id, first_name, last_name, nickname FROM users WHERE id = ?').get(id);
-  if (!u) return null;
-  return { id: u.id, firstName: u.first_name, lastName: u.last_name, nickname: u.nickname };
+function brief(u) {
+  return u ? { id: u.id, firstName: u.first_name, lastName: u.last_name, nickname: u.nickname } : null;
 }
 
 router.get('/state', (req, res) => {
-  const competition = getCompetition();
-  const isAdmin = !!req.user.is_admin;
+  const competition = req.competition;
+  const order = getRunningOrder(competition);
 
   const base = {
+    competitionId: competition.id,
+    competitionName: competition.name,
     status: competition.status,
-    isAdmin,
+    isAdmin: req.isAdmin,
+    totalContestants: order.length,
   };
 
   if (competition.status === 'setup') {
-    return res.json({
-      ...base,
-      contestantCount: db.prepare('SELECT COUNT(*) AS n FROM users').get().n,
-    });
+    return res.json({ ...base, members: getUsersByIds(order).map(brief) });
   }
 
-  const order = getRunningOrder(competition);
+  if (competition.status !== 'in_progress') {
+    return res.json(base);
+  }
+
   const currentContestantId = getCurrentContestantId(competition);
-  const currentContestant = getUserBrief(currentContestantId);
-
-  if (competition.status === 'judging_complete' || competition.status === 'results_published') {
-    return res.json({
-      ...base,
-      totalContestants: order.length,
-    });
-  }
-
-  // in_progress
   const isCurrentContestant = req.user.id === currentContestantId;
-  const judges = eligibleJudgeIds(currentContestantId);
-  const submittedCount = submittedJudgeCount(currentContestantId);
+  const judgeIds = eligibleJudgeIds(competition);
+  const submitted = submittedJudgeIds(competition.id, currentContestantId);
 
-  let myScore = null;
-  if (!isCurrentContestant) {
-    myScore = db
-      .prepare('SELECT * FROM scores WHERE judge_id = ? AND contestant_id = ?')
-      .get(req.user.id, currentContestantId) || null;
-  }
+  const myScore = isCurrentContestant
+    ? null
+    : db
+        .prepare('SELECT * FROM scores WHERE competition_id = ? AND judge_id = ? AND contestant_id = ?')
+        .get(competition.id, req.user.id, currentContestantId);
 
   res.json({
     ...base,
     phase: competition.current_phase,
     contestantIndex: competition.current_index,
-    totalContestants: order.length,
-    currentContestant,
+    currentContestant: brief(getUsersByIds([currentContestantId])[0]),
     isCurrentContestant,
-    submittedCount,
-    totalJudges: judges.length,
+    submittedCount: judgeIds.filter((id) => submitted.has(id)).length,
+    totalJudges: judgeIds.length,
+    judges:
+      competition.current_phase === 'scoring'
+        ? getUsersByIds(judgeIds).map((u) => ({ ...brief(u), submitted: submitted.has(u.id) }))
+        : [],
     myScore: myScore
       ? {
           cocktail: myScore.cocktail,
@@ -80,11 +74,10 @@ router.get('/state', (req, res) => {
 });
 
 router.get('/results', (req, res) => {
-  const competition = getCompetition();
-  if (competition.status !== 'results_published') {
+  if (req.competition.status !== 'results_published') {
     return res.status(409).json({ error: 'Results have not been published yet' });
   }
-  res.json({ leaderboard: computeLeaderboard() });
+  res.json({ leaderboard: computeLeaderboard(req.competition) });
 });
 
 export default router;

@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-const { GMAIL_USER, GMAIL_APP_PASSWORD, PUBLIC_URL } = process.env;
+const { GMAIL_USER, GMAIL_APP_PASSWORD } = process.env;
 
 let transporter = null;
 if (GMAIL_USER && GMAIL_APP_PASSWORD) {
@@ -8,6 +8,16 @@ if (GMAIL_USER && GMAIL_APP_PASSWORD) {
     service: 'gmail',
     auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
   });
+}
+
+// Names are typed in by whoever registers, so never trust them in HTML.
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function wrapEmail({ preheader, body }) {
@@ -29,17 +39,10 @@ function wrapEmail({ preheader, body }) {
   </div>`;
 }
 
-function button(url, label) {
-  return `<div style="text-align:center;margin:28px 0;">
-    <a href="${url}" style="background:#caa25d;color:#0d0a08;text-decoration:none;font-weight:bold;padding:14px 32px;border-radius:999px;display:inline-block;font-family:Georgia,serif;">${label}</a>
-  </div>`;
-}
-
-async function send({ to, subject, html, link }) {
+async function send({ to, subject, html }) {
   if (!transporter) {
     console.log(`\n[email:disabled] Would send to ${to}: ${subject}`);
     console.log(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
-    if (link) console.log(`[email:disabled] Link: ${link}`);
     return;
   }
   await transporter.sendMail({
@@ -50,52 +53,26 @@ async function send({ to, subject, html, link }) {
   });
 }
 
-export async function sendInviteEmail(user, loginToken) {
-  const link = `${PUBLIC_URL}/api/auth/verify?token=${loginToken}`;
-  const html = wrapEmail({
-    preheader: 'You are cordially invited.',
-    body: `
-      <p style="font-size:18px;">Darling ${user.nickname},</p>
-      <p>You have been invited to compete in the <strong>Woodhamptons Cocktail Competition</strong> &mdash; a Met Gala&ndash;themed evening of cocktails, costumes, and table settings.</p>
-      <p>You'll be judged (and you'll judge everyone else!) on three categories: <strong>Cocktail</strong>, <strong>Costume</strong>, and <strong>Table Setting</strong>.</p>
-      <p>Tap below to step onto the carpet and access your competition dashboard on your phone:</p>
-      ${button(link, 'Enter the Competition')}
-      <p style="color:#a9987e;font-size:13px;">This link logs you in and keeps you logged in on this phone, so you can close the app any time and pick up right where you left off.</p>
-    `,
-  });
-  await send({ to: user.email, subject: 'You’re invited: Woodhamptons Cocktail Competition', html, link });
-}
-
-export async function sendLoginLinkEmail(user, loginToken) {
-  const link = `${PUBLIC_URL}/api/auth/verify?token=${loginToken}`;
-  const html = wrapEmail({
-    body: `
-      <p style="font-size:18px;">Hello ${user.nickname},</p>
-      <p>Here's your link back onto the carpet:</p>
-      ${button(link, 'Log Me Back In')}
-    `,
-  });
-  await send({ to: user.email, subject: 'Your Woodhamptons login link', html, link });
-}
-
-export async function sendResultsEmail(user, leaderboard) {
+export async function sendResultsEmail(user, leaderboard, competitionName) {
   const rows = leaderboard
-    .map(
-      (row, i) => `
+    .map((row, i) => {
+      const style = `color:${i === 0 ? '#caa25d' : '#f0e6d6'};font-weight:${i === 0 ? 'bold' : 'normal'};`;
+      return `
       <tr>
-        <td style="padding:8px 6px;color:${i === 0 ? '#caa25d' : '#f0e6d6'};font-weight:${i === 0 ? 'bold' : 'normal'};">${i + 1}. ${row.nickname}</td>
-        <td style="padding:8px 6px;text-align:right;color:${i === 0 ? '#caa25d' : '#f0e6d6'};font-weight:${i === 0 ? 'bold' : 'normal'};">${row.total}</td>
-      </tr>`
-    )
+        <td style="padding:8px 6px;${style}">${i + 1}. ${escapeHtml(row.nickname)}</td>
+        <td style="padding:8px 6px;text-align:right;${style}">${row.total}</td>
+      </tr>`;
+    })
     .join('');
   const html = wrapEmail({
     preheader: 'The results are in.',
     body: `
-      <p style="font-size:18px;">And the votes are in, ${user.nickname}...</p>
-      <p>Here are the final standings from the Woodhamptons Cocktail Competition:</p>
+      <p style="font-size:18px;">And the votes are in, ${escapeHtml(user.nickname)}...</p>
+      <p>Here are the final standings from <strong>${escapeHtml(competitionName)}</strong>:</p>
       <table style="width:100%;border-collapse:collapse;margin-top:16px;">${rows}</table>
       <p style="margin-top:24px;">Thank you for walking the carpet with us. See you at the next one!</p>
     `,
   });
-  await send({ to: user.email, subject: 'Woodhamptons Cocktail Competition — Final Results', html });
+  // Email subjects are plain text, so the name needs no escaping there.
+  await send({ to: user.email, subject: `${competitionName} — Final Results`, html });
 }

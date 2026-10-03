@@ -1,38 +1,79 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 
-function emptyForm() {
-  return { firstName: '', lastName: '', nickname: '', email: '', isAdmin: false };
-}
+const POLL_MS = 5000;
 
-export default function AdminPanel({ onNavigateHome }) {
-  const [users, setUsers] = useState(null);
-  const [competition, setCompetition] = useState(null);
-  const [form, setForm] = useState(emptyForm());
+export const STATUS_LABELS = {
+  setup: 'Open for joining',
+  in_progress: 'In progress',
+  judging_complete: 'Judging complete',
+  results_published: 'Results published',
+};
+
+const sectionTitle = (text, color = 'var(--gold-bright)') => (
+  <div style={{ fontWeight: 700, marginBottom: 10, color }}>{text}</div>
+);
+
+export default function AdminPanel({ user, onNavigateHome }) {
+  const [competitions, setCompetitions] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [newName, setNewName] = useState('');
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  async function refresh() {
-    const [u, c] = await Promise.all([api.adminUsers(), api.adminCompetition()]);
-    setUsers(u.users);
-    setCompetition(c);
-  }
+  const loadCompetitions = useCallback(async () => {
+    const { competitions: list } = await api.adminCompetitions();
+    setCompetitions(list);
+    setSelectedId((current) => {
+      if (current && list.some((c) => c.id === current)) return current;
+      if (list.some((c) => c.id === user.competitionId)) return user.competitionId;
+      return list[0]?.id ?? null;
+    });
+  }, [user.competitionId]);
+
+  const loadDetail = useCallback(async () => {
+    if (!selectedId) return setDetail(null);
+    setDetail(await api.adminCompetition(selectedId));
+  }, [selectedId]);
 
   useEffect(() => {
-    refresh().catch((e) => setError(e.message));
-  }, []);
+    loadCompetitions().catch((e) => setError(e.message));
+  }, [loadCompetitions]);
 
-  async function createUser(e) {
+  useEffect(() => {
+    loadDetail().catch((e) => setError(e.message));
+    const t = setInterval(() => loadDetail().catch(() => {}), POLL_MS);
+    return () => clearInterval(t);
+  }, [loadDetail]);
+
+  async function run(action, { confirmText, successNotice, goHome } = {}) {
+    if (confirmText && !confirm(confirmText)) return;
+    setError(null);
+    setNotice(null);
+    try {
+      await action();
+      await Promise.all([loadCompetitions(), loadDetail()]);
+      if (successNotice) setNotice(successNotice);
+      if (goHome) onNavigateHome?.();
+    } catch (err) {
+      setError(err.message);
+      loadDetail().catch(() => {});
+    }
+  }
+
+  async function createCompetition(e) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      await api.adminCreateUser(form);
-      setForm(emptyForm());
-      setNotice(`Invite sent to ${form.email}.`);
-      await refresh();
+      const { competition } = await api.adminCreateCompetition(newName.trim());
+      setNewName('');
+      setSelectedId(competition.id);
+      await loadCompetitions();
+      setNotice(`Created "${competition.name}". Share the link so people can join it.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -40,98 +81,21 @@ export default function AdminPanel({ onNavigateHome }) {
     }
   }
 
-  async function randomize() {
-    setError(null);
-    try {
-      await api.adminRandomizeOrder();
-      await refresh();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
   function move(idx, dir) {
-    const order = [...competition.runningOrder];
+    const order = [...detail.competition.runningOrder];
     const j = idx + dir;
     if (j < 0 || j >= order.length) return;
     [order[idx], order[j]] = [order[j], order[idx]];
-    setCompetition({ ...competition, runningOrder: order });
-    api.adminSetOrder(order).catch((err) => setError(err.message));
+    setDetail({ ...detail, competition: { ...detail.competition, runningOrder: order } });
+    api.adminSetOrder(selectedId, order).catch((err) => setError(err.message));
   }
 
-  async function start() {
-    setError(null);
-    try {
-      await api.adminStart();
-      await refresh();
-      onNavigateHome?.();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function forceAdvance() {
-    if (!confirm('Force-advance to the next contestant even though not everyone has submitted?')) return;
-    setError(null);
-    try {
-      await api.adminForceAdvance();
-      await refresh();
-      onNavigateHome?.();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function publish() {
-    if (!confirm('Publish final results to everyone now? This sends an email to all contestants.')) return;
-    setError(null);
-    try {
-      await api.adminPublish();
-      await refresh();
-      onNavigateHome?.();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function removeUser(u) {
-    if (
-      !confirm(
-        `Remove ${u.nickname} from the competition?\n\nThis deletes their account and any scores they gave or received. This cannot be undone.`
-      )
-    ) {
-      return;
-    }
-    setError(null);
-    try {
-      await api.adminRemoveUser(u.id);
-      await refresh();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function resetCompetition() {
-    const warning =
-      "This will permanently delete every score anyone has submitted and put the competition back to Setup.\n\n" +
-      "Contestants stay on the roster, but the running order will be cleared and everyone starts fresh.\n\n" +
-      'This cannot be undone. Are you absolutely sure?';
-    if (!confirm(warning)) return;
-    setError(null);
-    setNotice(null);
-    try {
-      await api.adminReset();
-      setNotice('Competition has been reset.');
-      await refresh();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  const usersById = new Map((users || []).map((u) => [u.id, u]));
+  const c = detail?.competition;
+  const membersById = new Map((detail?.members || []).map((m) => [m.id, m]));
+  const judgingOver = c?.status === 'judging_complete' || c?.status === 'results_published';
 
   return (
-    <div className="main">
+    <div>
       <div className="eyebrow">Admin</div>
       <h1 className="headline" style={{ marginBottom: 16 }}>Admin Panel</h1>
 
@@ -139,108 +103,179 @@ export default function AdminPanel({ onNavigateHome }) {
       {notice && <div className="success-banner">{notice}</div>}
 
       <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--gold-bright)' }}>Competition Status</div>
-        <div className="subtext" style={{ marginBottom: 14 }}>
-          Status: <strong>{competition?.status}</strong>
-          {competition?.status === 'in_progress' && <> &middot; Phase: <strong>{competition.currentPhase}</strong></>}
-        </div>
-
-        {competition?.status === 'setup' && (
-          <button className="btn" onClick={start}>Start Competition</button>
-        )}
-        {competition?.status === 'in_progress' && (
-          <button className="btn secondary" onClick={forceAdvance}>Force Advance (skip waiting)</button>
-        )}
-        {competition?.status === 'judging_complete' && (
-          <button className="btn" onClick={publish}>Submit Results to Everyone</button>
-        )}
-      </div>
-
-      {competition?.status === 'setup' && (
-        <div className="card">
-          <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--gold-bright)' }}>Running Order</div>
-          {competition.runningOrder.length === 0 ? (
-            <div className="subtext">No running order yet.</div>
-          ) : (
-            <ul className="drag-list">
-              {competition.runningOrder.map((id, idx) => (
-                <li key={id}>
-                  <span>{idx + 1}. {usersById.get(id)?.nickname || '…'}</span>
-                  <span className="order-controls">
-                    <button onClick={() => move(idx, -1)} aria-label="Move up">↑</button>
-                    <button onClick={() => move(idx, 1)} aria-label="Move down">↓</button>
-                  </span>
-                </li>
+        {sectionTitle('Competitions')}
+        {competitions?.length > 0 && (
+          <div className="field">
+            <label htmlFor="selectedCompetition">Managing</label>
+            <select
+              id="selectedCompetition"
+              value={selectedId ?? ''}
+              onChange={(e) => {
+                setNotice(null);
+                setSelectedId(Number(e.target.value));
+              }}
+            >
+              {competitions.map((comp) => (
+                <option key={comp.id} value={comp.id}>
+                  {comp.name} — {STATUS_LABELS[comp.status]} ({comp.memberCount})
+                </option>
               ))}
-            </ul>
-          )}
-          <button className="btn secondary" onClick={randomize} style={{ marginTop: 8 }}>
-            Randomize Order
-          </button>
-        </div>
-      )}
-
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--gold-bright)' }}>Add Contestant</div>
-        <form onSubmit={createUser}>
-          <div className="field">
-            <label>First name</label>
-            <input required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+            </select>
           </div>
+        )}
+        <form onSubmit={createCompetition}>
           <div className="field">
-            <label>Surname</label>
-            <input required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Nickname</label>
-            <input required value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} />
-          </div>
-          <div className="field">
-            <label>Email</label>
-            <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </div>
-          <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label htmlFor="newCompetition">New competition name</label>
             <input
-              type="checkbox"
-              id="isAdmin"
-              style={{ width: 'auto' }}
-              checked={form.isAdmin}
-              onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })}
+              id="newCompetition"
+              maxLength={80}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Woodhamptons Cocktail Competition"
             />
-            <label htmlFor="isAdmin" style={{ margin: 0 }}>Make this person an admin</label>
           </div>
-          <button className="btn" type="submit" disabled={busy}>
-            {busy ? 'Sending invite…' : 'Add & Send Invite'}
+          <button className="btn secondary" type="submit" disabled={busy || !newName.trim()}>
+            Create Competition
           </button>
         </form>
       </div>
 
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--gold-bright)' }}>Roster ({users?.length ?? 0})</div>
-        {users?.map((u) => (
-          <div className="roster-item" key={u.id}>
-            <span>{u.firstName} "{u.nickname}" {u.lastName}{u.isAdmin && <span className="badge">Admin</span>}</span>
+      {c && (
+        <>
+          <div className="card">
+            {sectionTitle(c.name)}
+            <div className="subtext" style={{ marginBottom: 14 }}>
+              Status: <strong>{STATUS_LABELS[c.status]}</strong>
+              {c.status === 'in_progress' && (
+                <>
+                  {' '}
+                  &middot; Contestant {c.currentIndex + 1} of {c.runningOrder.length}, {c.currentPhase}
+                </>
+              )}
+            </div>
+
+            {c.status === 'setup' && (
+              <button
+                className="btn"
+                onClick={() => run(() => api.adminStart(c.id), { goHome: user.competitionId === c.id })}
+              >
+                Start Competition
+              </button>
+            )}
+            {c.status === 'in_progress' && (
+              <button
+                className="btn secondary"
+                onClick={() =>
+                  run(() => api.adminForceAdvance(c.id, c.currentIndex), {
+                    confirmText: 'Force-advance to the next contestant even though not everyone has submitted?',
+                    goHome: user.competitionId === c.id,
+                  })
+                }
+              >
+                Force Advance (skip waiting)
+              </button>
+            )}
+            {c.status === 'judging_complete' && (
+              <button
+                className="btn"
+                onClick={() =>
+                  run(() => api.adminPublish(c.id), {
+                    confirmText: 'Publish final results to everyone now? This also emails everyone the results.',
+                    successNotice: 'Results published!',
+                    goHome: user.competitionId === c.id,
+                  })
+                }
+              >
+                Submit Results to Everyone
+              </button>
+            )}
+          </div>
+
+          {c.status === 'setup' && (
+            <div className="card">
+              {sectionTitle('Running Order')}
+              {c.runningOrder.length === 0 ? (
+                <div className="subtext">Nobody has joined yet.</div>
+              ) : (
+                <ul className="drag-list">
+                  {c.runningOrder.map((id, idx) => (
+                    <li key={id}>
+                      <span>
+                        {idx + 1}. {membersById.get(id)?.nickname || '…'}
+                      </span>
+                      <span className="order-controls">
+                        <button onClick={() => move(idx, -1)} aria-label="Move up">↑</button>
+                        <button onClick={() => move(idx, 1)} aria-label="Move down">↓</button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                className="btn secondary"
+                style={{ marginTop: 8 }}
+                disabled={c.runningOrder.length < 2}
+                onClick={() => run(() => api.adminRandomizeOrder(c.id))}
+              >
+                Randomize Order
+              </button>
+            </div>
+          )}
+
+          <div className="card">
+            {sectionTitle(`Members (${detail.members.length})`)}
+            {detail.members.length === 0 && <div className="subtext">Nobody has joined yet.</div>}
+            {detail.members.map((m) => (
+              <div className="roster-item" key={m.id}>
+                <span>
+                  {m.firstName} &ldquo;{m.nickname}&rdquo; {m.lastName}
+                  {m.isAdmin && <span className="badge">Admin</span>}
+                  <br />
+                  <span className="subtext" style={{ fontSize: 12 }}>{m.email}</span>
+                </span>
+                {!judgingOver && (
+                  <button
+                    className="btn danger"
+                    style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
+                    onClick={() =>
+                      run(() => api.adminRemoveMember(c.id, m.id), {
+                        confirmText:
+                          `Remove ${m.nickname} from ${c.name}?\n\n` +
+                          'Any scores they gave or received in this competition are deleted. ' +
+                          'Their account stays, so they can join another competition.',
+                      })
+                    }
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            {sectionTitle('Danger Zone', 'var(--danger)')}
+            <div className="subtext" style={{ marginBottom: 14 }}>
+              Resetting wipes every score submitted in {c.name} and puts it back to Setup. Members and the
+              running order stay. This cannot be undone.
+            </div>
             <button
               className="btn danger"
-              style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
-              onClick={() => removeUser(u)}
+              onClick={() =>
+                run(() => api.adminReset(c.id), {
+                  confirmText:
+                    `This will permanently delete every score anyone has submitted in ${c.name} ` +
+                    'and put it back to Setup.\n\nMembers stay, and everyone starts fresh.\n\n' +
+                    'This cannot be undone. Are you absolutely sure?',
+                  successNotice: 'Competition has been reset.',
+                })
+              }
             >
-              Remove
+              Reset Competition
             </button>
           </div>
-        ))}
-      </div>
-
-      <div className="card">
-        <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--danger)' }}>Danger Zone</div>
-        <div className="subtext" style={{ marginBottom: 14 }}>
-          Resetting wipes every submitted score and puts the competition back to Setup. Contestants stay on
-          the roster, but you'll need to set the running order again. This cannot be undone.
-        </div>
-        <button className="btn danger" onClick={resetCompetition}>
-          Reset Competition
-        </button>
-      </div>
+        </>
+      )}
     </div>
   );
 }

@@ -10,8 +10,8 @@ export default function Prep({ state, onAdvanced }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await api.adminStartScoring();
-      onAdvanced(res.competition);
+      await api.adminStartScoring(state.competitionId);
+      onAdvanced();
     } catch (err) {
       setError(err.message);
     } finally {

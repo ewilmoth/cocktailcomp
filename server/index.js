@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { attachUser } from './auth.js';
 import authRoutes from './routes/auth.js';
+import meRoutes from './routes/me.js';
 import adminRoutes from './routes/admin.js';
 import competitionRoutes from './routes/competition.js';
 import scoreRoutes from './routes/scores.js';
@@ -14,13 +15,16 @@ import scoreRoutes from './routes/scores.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 
+if (!process.env.ADMIN_EMAILS) console.warn('Warning: ADMIN_EMAILS is not set in .env, so nobody is an admin.');
+if (!process.env.ADMIN_PASSWORD) console.warn('Warning: ADMIN_PASSWORD is not set in .env, so admins cannot log in.');
+
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(attachUser);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/me', meRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/competition', competitionRoutes);
 app.use('/api/scores', scoreRoutes);
