@@ -14,7 +14,7 @@ const sectionTitle = (text, color = 'var(--gold-bright)') => (
   <div style={{ fontWeight: 700, marginBottom: 10, color }}>{text}</div>
 );
 
-export default function AdminPanel({ user, onNavigateHome }) {
+export default function AdminPanel({ user, onNavigateHome, onJoined }) {
   const [competitions, setCompetitions] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -78,6 +78,36 @@ export default function AdminPanel({ user, onNavigateHome }) {
       setError(err.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function joinSelf(comp) {
+    // Without a name yet, the picker on Home asks for it.
+    if (!user.profileComplete) return onNavigateHome?.();
+    const current = competitions?.find((x) => x.id === user.competitionId);
+    if (
+      current &&
+      (current.status === 'in_progress' || current.status === 'judging_complete') &&
+      !confirm(
+        `Leave ${current.name}?\n\n` +
+          'It is still under way. You will be taken out of its running order and any scores you gave or ' +
+          'received in it will be deleted. This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    try {
+      await api.join({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        nickname: user.nickname,
+        competitionId: comp.id,
+      });
+      onJoined?.();
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -172,6 +202,12 @@ export default function AdminPanel({ user, onNavigateHome }) {
                 </>
               )}
             </div>
+
+            {c.status === 'setup' && user.competitionId !== c.id && (
+              <button className="btn secondary" style={{ marginBottom: 10 }} onClick={() => joinSelf(c)}>
+                Join This Competition
+              </button>
+            )}
 
             {c.status === 'setup' && (
               <button

@@ -86,6 +86,7 @@ export default function App() {
     content = (
       <AdminPanel
         user={user}
+        onJoined={onJoined}
         onNavigateHome={() => {
           setPage('home');
           refresh();
