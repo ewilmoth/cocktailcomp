@@ -1,4 +1,5 @@
 import { db, getCompetition, updateCompetition } from './db.js';
+import { sendRoundBackupEmail } from './email.js';
 
 // The running order is the competition's roster: joining appends to it,
 // kicking removes from it. users.competition_id only says where a user's
@@ -63,11 +64,40 @@ export function maybeAdvance(competitionId) {
 }
 
 export function advance(competition) {
+  if (competition.current_phase === 'scoring') emailRoundBackup(competition);
   const nextIndex = competition.current_index + 1;
   if (nextIndex >= getRunningOrder(competition).length) {
     return updateCompetition(competition.id, { status: 'judging_complete', current_phase: 'prep' });
   }
   return updateCompetition(competition.id, { current_index: nextIndex, current_phase: 'prep' });
+}
+
+// A safety copy of each finished round, in case the server dies mid-game.
+// Fire-and-forget: a slow or failing mail server must never hold up play.
+function emailRoundBackup(competition) {
+  const to = process.env.BACKUP_EMAIL;
+  if (!to) return;
+  const contestantId = getCurrentContestantId(competition);
+  const [contestant] = getUsersByIds([contestantId]);
+  const scores = db
+    .prepare('SELECT * FROM scores WHERE competition_id = ? AND contestant_id = ? AND submitted_at IS NOT NULL')
+    .all(competition.id, contestantId);
+  const byJudge = new Map(scores.map((s) => [s.judge_id, s]));
+  const round = getUsersByIds(eligibleJudgeIds(competition)).map((j) => ({
+    nickname: j.nickname,
+    name: `${j.first_name} ${j.last_name}`,
+    score: byJudge.get(j.id) || null,
+  }));
+
+  sendRoundBackupEmail({
+    to,
+    competitionName: competition.name,
+    roundNumber: competition.current_index + 1,
+    totalRounds: getRunningOrder(competition).length,
+    contestant,
+    round,
+    leaderboard: computeLeaderboard(competition),
+  }).catch((err) => console.error('Backup email failed:', err.message));
 }
 
 export function addMember(competitionId, userId) {

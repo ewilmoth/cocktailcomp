@@ -65,7 +65,8 @@ Open http://localhost:5173 and log in with an email from `ADMIN_EMAILS` plus `AD
 | `ADMIN_EMAILS` | Comma-separated list of admin emails, e.g. `ewilmoth@gmail.com,keiran@example.com` |
 | `ADMIN_PASSWORD` | Shared password every admin email must enter to log in. Admin login is refused if it's blank |
 | `SCORES_PASSWORD` | Password to view the cumulative scores while a game is running. If blank, nobody can view them mid-game |
-| `GMAIL_USER` | The Gmail address the results email is sent from |
+| `BACKUP_EMAIL` | Gets a backup email after every scored round: that round's scores and comments, plus the running totals. Leave blank to turn off |
+| `GMAIL_USER` | The Gmail address the results and backup emails are sent from |
 | `GMAIL_APP_PASSWORD` | A [Google App Password](https://myaccount.google.com/apppasswords) for that account (not your normal password — you'll need 2-Step Verification turned on to generate one) |
 
 Leave `GMAIL_USER`/`GMAIL_APP_PASSWORD` blank to run in "dev mode", where the results email is printed to the

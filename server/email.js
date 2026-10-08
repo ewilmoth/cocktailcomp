@@ -53,6 +53,61 @@ async function send({ to, subject, html }) {
   });
 }
 
+function backupTable(headers, rows) {
+  const cell = 'padding:6px 10px;border:1px solid #ccc;text-align:left;vertical-align:top;';
+  const head = headers.map((h) => `<th style="${cell}background:#f2ece2;">${h}</th>`).join('');
+  const body = rows.map((r) => `<tr>${r.map((v) => `<td style="${cell}">${v}</td>`).join('')}</tr>`).join('');
+  return `<table style="border-collapse:collapse;font-size:14px;margin:8px 0 20px;">${head ? `<tr>${head}</tr>` : ''}${body}</table>`;
+}
+
+export async function sendRoundBackupEmail({
+  to,
+  competitionName,
+  roundNumber,
+  totalRounds,
+  contestant,
+  round,
+  leaderboard,
+}) {
+  const who = escapeHtml(contestant?.nickname ?? 'Unknown');
+  const roundRows = round.map(({ nickname, name, score }) => [
+    `${escapeHtml(nickname)} <span style="color:#777;">(${escapeHtml(name)})</span>`,
+    ...(score
+      ? [
+          score.cocktail,
+          score.costume,
+          score.table_setting,
+          `<strong>${score.cocktail + score.costume + score.table_setting}</strong>`,
+          escapeHtml(score.comments || ''),
+        ]
+      : ['<em>no score</em>', '', '', '', '']),
+  ]);
+  const totalRows = leaderboard.map((r, i) => [
+    i + 1,
+    escapeHtml(r.nickname),
+    r.cocktail,
+    r.costume,
+    r.tableSetting,
+    `<strong>${r.total}</strong>`,
+  ]);
+
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;color:#222;">
+    <h2 style="margin:0 0 4px;">${escapeHtml(competitionName)}: round ${roundNumber} of ${totalRounds}</h2>
+    <p style="margin:0 0 16px;color:#555;">Backup copy, sent ${new Date().toLocaleString('en-GB')}.</p>
+    <h3 style="margin:0;">Scores for ${who}</h3>
+    ${backupTable(['Judge', 'Cocktail Flavour', 'Costume', 'Presentation', 'Total', 'Comments'], roundRows)}
+    <h3 style="margin:0;">Cumulative scores so far</h3>
+    ${backupTable(['Rank', 'Contestant', 'Cocktail Flavour', 'Costume', 'Presentation', 'Total'], totalRows)}
+  </div>`;
+
+  await send({
+    to,
+    subject: `[Backup] ${competitionName} — round ${roundNumber}/${totalRounds}: ${contestant?.nickname ?? 'Unknown'}`,
+    html,
+  });
+}
+
 export async function sendResultsEmail(user, leaderboard, competitionName) {
   const rows = leaderboard
     .map((row, i) => {
