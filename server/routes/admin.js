@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db, getCompetition, updateCompetition } from '../db.js';
-import { requireAdmin, isAdminEmail } from '../auth.js';
+import { requireAdmin, isAdminEmail, checkScoresPassword } from '../auth.js';
 import { sendResultsEmail } from '../email.js';
 import {
   getRunningOrder,
@@ -127,6 +127,17 @@ router.post('/competitions/:id/force-advance', (req, res) => {
 });
 
 router.get('/competitions/:id/leaderboard', (req, res) => {
+  // Mid-game totals are locked even from admins; once judging ends they need
+  // them to announce the winner.
+  if (req.competition.status === 'in_progress') {
+    const given = req.get('X-Scores-Password');
+    if (!checkScoresPassword(given)) {
+      return res.status(403).json({
+        needsScoresPassword: true,
+        error: given ? 'Wrong password' : 'Scores are locked while the game is on',
+      });
+    }
+  }
   res.json({ leaderboard: computeLeaderboard(req.competition) });
 });
 

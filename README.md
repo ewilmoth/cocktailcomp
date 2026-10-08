@@ -29,7 +29,9 @@ with an admin controlling the pace from their phone.
 - Everyone can close the app/phone browser at any point and reopen it later — they'll land back exactly
   where they left off, including any half-finished score (it autosaves as you tap).
 - Contestants can only ever see the scores *they* gave (My Scores). Admins get a hidden **Cumulative
-  Scores** page in the sidebar with the live leaderboard.
+  Scores** page in the sidebar with the leaderboard. While a game is running it's locked: opening it plays
+  a short video, then asks for `SCORES_PASSWORD` (separate from the admin password, so admins can't peek).
+  Once judging is complete it opens without a password so the winner can be announced.
 - Once every contestant has been judged, admins see **See Final Scores**, review the leaderboard, and tap
   **Submit Results to Everyone** — this reveals the final leaderboard on every phone and emails everyone the
   results.
@@ -62,6 +64,7 @@ Open http://localhost:5173 and log in with an email from `ADMIN_EMAILS` plus `AD
 | `DB_PATH` | Where the SQLite file lives (default `./data/woodhamptons.db`) |
 | `ADMIN_EMAILS` | Comma-separated list of admin emails, e.g. `ewilmoth@gmail.com,keiran@example.com` |
 | `ADMIN_PASSWORD` | Shared password every admin email must enter to log in. Admin login is refused if it's blank |
+| `SCORES_PASSWORD` | Password to view the cumulative scores while a game is running. If blank, nobody can view them mid-game |
 | `GMAIL_USER` | The Gmail address the results email is sent from |
 | `GMAIL_APP_PASSWORD` | A [Google App Password](https://myaccount.google.com/apppasswords) for that account (not your normal password — you'll need 2-Step Verification turned on to generate one) |
 

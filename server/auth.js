@@ -46,15 +46,29 @@ export function isAdminLoginLocked(email) {
   return entry.count >= ADMIN_FAIL_LIMIT;
 }
 
+// Hashing first gives equal-length buffers, which timingSafeEqual requires.
+function passwordMatches(given, expected) {
+  const a = crypto.createHash('sha256').update(String(given || '')).digest();
+  const b = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+export function checkScoresPassword(password) {
+  const expected = process.env.SCORES_PASSWORD;
+  if (!expected) {
+    console.error('Mid-game scores refused: SCORES_PASSWORD is not set in .env');
+    return false;
+  }
+  return passwordMatches(password, expected);
+}
+
 export function checkAdminPassword(email, password) {
   const expected = process.env.ADMIN_PASSWORD;
   if (!expected) {
     console.error('Admin login refused: ADMIN_PASSWORD is not set in .env');
     return false;
   }
-  const a = crypto.createHash('sha256').update(String(password || '')).digest();
-  const b = crypto.createHash('sha256').update(expected).digest();
-  const ok = crypto.timingSafeEqual(a, b);
+  const ok = passwordMatches(password, expected);
   if (ok) {
     adminFailures.delete(email);
   } else {

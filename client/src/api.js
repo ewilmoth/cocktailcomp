@@ -46,7 +46,10 @@ export const api = {
   adminStart: (id) => post(`${comp(id)}/start`),
   adminStartScoring: (id) => post(`${comp(id)}/start-scoring`),
   adminForceAdvance: (id, expectedIndex) => post(`${comp(id)}/force-advance`, { expectedIndex }),
-  adminLeaderboard: (id) => request(`${comp(id)}/leaderboard`),
+  adminLeaderboard: (id, scoresPassword) =>
+    request(`${comp(id)}/leaderboard`, {
+      headers: { 'Content-Type': 'application/json', ...(scoresPassword ? { 'X-Scores-Password': scoresPassword } : {}) },
+    }),
   adminPublish: (id) => post(`${comp(id)}/publish`),
   adminReset: (id) => post(`${comp(id)}/reset`),
   adminDeleteCompetition: (id) => request(comp(id), { method: 'DELETE' }),

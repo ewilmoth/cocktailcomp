@@ -17,6 +17,9 @@ const clientDist = path.join(__dirname, '..', 'client', 'dist');
 
 if (!process.env.ADMIN_EMAILS) console.warn('Warning: ADMIN_EMAILS is not set in .env, so nobody is an admin.');
 if (!process.env.ADMIN_PASSWORD) console.warn('Warning: ADMIN_PASSWORD is not set in .env, so admins cannot log in.');
+if (!process.env.SCORES_PASSWORD) {
+  console.warn('Warning: SCORES_PASSWORD is not set in .env, so nobody can view scores mid-game.');
+}
 
 const app = express();
 app.use(express.json());
