@@ -231,18 +231,28 @@ export default function AdminPanel({ user, onNavigateHome, onJoined }) {
               </button>
             )}
             {c.status === 'judging_complete' && (
-              <button
-                className="btn"
-                onClick={() =>
-                  run(() => api.adminPublish(c.id), {
-                    confirmText: 'Publish final results to everyone now? This also emails everyone the results.',
-                    successNotice: 'Results published!',
-                    goHome: user.competitionId === c.id,
-                  })
-                }
-              >
-                Submit Results to Everyone
-              </button>
+              <>
+                <div className="error-banner">
+                  This shows the final scores and the winner on <strong>everyone's phone</strong> straight away,
+                  and emails everyone the results. Only tap it when you're ready to announce.
+                </div>
+                <button
+                  className="btn"
+                  onClick={() =>
+                    run(() => api.adminPublish(c.id), {
+                      confirmText:
+                        `Reveal the results of ${c.name} to everyone now?\n\n` +
+                        "The final scores and the winner will appear on EVERY contestant's phone straight " +
+                        'away, and everyone will be emailed the results.\n\n' +
+                        "This can't be undone. Only continue if you're ready to announce.",
+                      successNotice: 'Results published!',
+                      goHome: user.competitionId === c.id,
+                    })
+                  }
+                >
+                  Submit Results to Everyone
+                </button>
+              </>
             )}
           </div>
 
