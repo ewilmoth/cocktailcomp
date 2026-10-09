@@ -33,6 +33,7 @@ export const api = {
 
   state: () => request('/competition/state'),
   results: () => request('/competition/results'),
+  observerFeed: () => request('/competition/feed'),
 
   scoreDraft: (payload) => request('/scores/draft', { method: 'PATCH', body: JSON.stringify(payload) }),
   scoreSubmit: (payload) => post('/scores/submit', payload),
@@ -54,4 +55,6 @@ export const api = {
   adminReset: (id) => post(`${comp(id)}/reset`),
   adminDeleteCompetition: (id) => request(comp(id), { method: 'DELETE' }),
   adminRemoveMember: (id, userId) => request(`${comp(id)}/members/${userId}`, { method: 'DELETE' }),
+  adminMakeObserver: (id, userId) => post(`${comp(id)}/observers/${userId}`),
+  adminRemoveObserver: (id, userId) => request(`${comp(id)}/observers/${userId}`, { method: 'DELETE' }),
 };

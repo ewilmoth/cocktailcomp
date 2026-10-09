@@ -54,7 +54,7 @@ router.post('/join', (req, res) => {
       db.prepare('UPDATE competitions SET running_order = ? WHERE id = ?').run(JSON.stringify(order), leaving.id);
     }
     db.prepare(
-      'UPDATE users SET first_name = ?, last_name = ?, nickname = ?, competition_id = ? WHERE id = ?'
+      'UPDATE users SET first_name = ?, last_name = ?, nickname = ?, competition_id = ?, observer = 0 WHERE id = ?'
     ).run(firstName, lastName, nickname, competitionId, req.user.id);
     addMember(competitionId, req.user.id);
   })();

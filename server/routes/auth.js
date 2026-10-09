@@ -57,6 +57,8 @@ router.get('/me', (req, res) => {
       lastName: u.last_name,
       nickname: u.nickname,
       isAdmin: req.isAdmin,
+      isLeadAdmin: req.isLeadAdmin,
+      isObserver: !!u.observer && !!u.competition_id,
       profileComplete: !!(u.first_name && u.last_name && u.nickname),
       competitionId: u.competition_id,
       competitionName: competition?.name ?? null,

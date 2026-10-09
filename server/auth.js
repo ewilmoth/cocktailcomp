@@ -32,6 +32,12 @@ export function isAdminEmail(email) {
   return adminEmails().has(normalizeEmail(email));
 }
 
+// The one admin who can see and manage secret observers.
+export function isLeadAdminEmail(email) {
+  const lead = normalizeEmail(process.env.LEAD_ADMIN_EMAIL);
+  return !!lead && lead === normalizeEmail(email) && isAdminEmail(email);
+}
+
 // Keyed by email rather than IP: through the Cloudflare tunnel every request
 // arrives from 127.0.0.1.
 const adminFailures = new Map();
@@ -123,6 +129,7 @@ export function attachUser(req, res, next) {
   const token = req.cookies?.[SESSION_COOKIE];
   req.user = getUserFromSessionToken(token) || null;
   req.isAdmin = !!req.user && isAdminEmail(req.user.email);
+  req.isLeadAdmin = !!req.user && isLeadAdminEmail(req.user.email);
   req.sessionToken = token || null;
   next();
 }
@@ -135,5 +142,11 @@ export function requireAuth(req, res, next) {
 export function requireAdmin(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Not logged in' });
   if (!req.isAdmin) return res.status(403).json({ error: 'Admins only' });
+  next();
+}
+
+export function requireLeadAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Not logged in' });
+  if (!req.isLeadAdmin) return res.status(403).json({ error: 'Not allowed' });
   next();
 }

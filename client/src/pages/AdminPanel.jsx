@@ -10,6 +10,8 @@ export const STATUS_LABELS = {
   results_published: 'Results published',
 };
 
+const smallButton = { width: 'auto', padding: '6px 14px', fontSize: 13 };
+
 const sectionTitle = (text, color = 'var(--gold-bright)') => (
   <div style={{ fontWeight: 700, marginBottom: 10, color }}>{text}</div>
 );
@@ -299,24 +301,73 @@ export default function AdminPanel({ user, onNavigateHome, onJoined }) {
                   <span className="subtext" style={{ fontSize: 12 }}>{m.email}</span>
                 </span>
                 {!judgingOver && (
-                  <button
-                    className="btn danger"
-                    style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
-                    onClick={() =>
-                      run(() => api.adminRemoveMember(c.id, m.id), {
-                        confirmText:
-                          `Remove ${m.nickname} from ${c.name}?\n\n` +
-                          'Any scores they gave or received in this competition are deleted. ' +
-                          'Their account stays, so they can join another competition.',
-                      })
-                    }
-                  >
-                    Remove
-                  </button>
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                    <button
+                      className="btn danger"
+                      style={smallButton}
+                      onClick={() =>
+                        run(() => api.adminRemoveMember(c.id, m.id), {
+                          confirmText:
+                            `Remove ${m.nickname} from ${c.name}?\n\n` +
+                            'Any scores they gave or received in this competition are deleted. ' +
+                            'Their account stays, so they can join another competition.',
+                        })
+                      }
+                    >
+                      Remove
+                    </button>
+                    {user.isLeadAdmin && (
+                      <button
+                        className="btn secondary"
+                        style={smallButton}
+                        onClick={() =>
+                          run(() => api.adminMakeObserver(c.id, m.id), {
+                            confirmText:
+                              `Make ${m.nickname} a secret observer?\n\n` +
+                              'They come out of the running order and stop playing. Their phone shows a live ' +
+                              'feed of every vote (who voted, scores and comments) and the running totals.\n\n' +
+                              'Only you can see that they are observing.',
+                          })
+                        }
+                      >
+                        Observer
+                      </button>
+                    )}
+                  </span>
                 )}
               </div>
             ))}
           </div>
+
+          {user.isLeadAdmin && detail.observers && (
+            <div className="card">
+              {sectionTitle(`Secret Observers (${detail.observers.length})`)}
+              <div className="subtext" style={{ marginBottom: 10 }}>
+                Only you can see this. They watch every vote live and are hidden from everyone else.
+              </div>
+              {detail.observers.length === 0 && <div className="subtext">Nobody is observing.</div>}
+              {detail.observers.map((o) => (
+                <div className="roster-item" key={o.id}>
+                  <span>
+                    {o.firstName} &ldquo;{o.nickname}&rdquo; {o.lastName}
+                    <br />
+                    <span className="subtext" style={{ fontSize: 12 }}>{o.email}</span>
+                  </span>
+                  <button
+                    className="btn danger"
+                    style={smallButton}
+                    onClick={() =>
+                      run(() => api.adminRemoveObserver(c.id, o.id), {
+                        confirmText: `Stop ${o.nickname} observing?\n\nTheir phone goes back to the competition picker.`,
+                      })
+                    }
+                  >
+                    Stop
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="card">
             {sectionTitle('Danger Zone', 'var(--danger)')}

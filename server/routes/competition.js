@@ -73,6 +73,54 @@ router.get('/state', (req, res) => {
   });
 });
 
+// Everything, for secret observers only: every vote by name, round by round,
+// plus the running totals.
+router.get('/feed', (req, res) => {
+  if (!req.user.observer) return res.status(403).json({ error: 'Not allowed' });
+  const c = req.competition;
+  const order = getRunningOrder(c);
+  const usersById = new Map(getUsersByIds(order).map((u) => [u.id, u]));
+  const scores = db
+    .prepare('SELECT * FROM scores WHERE competition_id = ? AND submitted_at IS NOT NULL')
+    .all(c.id);
+  const byPair = new Map(scores.map((s) => [`${s.judge_id}:${s.contestant_id}`, s]));
+
+  const lastRound = c.status === 'setup' ? -1 : c.status === 'in_progress' ? c.current_index : order.length - 1;
+  const rounds = [];
+  for (let i = 0; i <= lastRound && i < order.length; i++) {
+    const contestantId = order[i];
+    const live = c.status === 'in_progress' && i === c.current_index;
+    rounds.push({
+      number: i + 1,
+      contestant: brief(usersById.get(contestantId)),
+      phase: live ? c.current_phase : 'done',
+      judges: order
+        .filter((id) => id !== contestantId)
+        .map((id) => {
+          const s = byPair.get(`${id}:${contestantId}`);
+          return {
+            ...brief(usersById.get(id)),
+            submitted: !!s,
+            cocktail: s?.cocktail ?? null,
+            costume: s?.costume ?? null,
+            tableSetting: s?.table_setting ?? null,
+            total: s ? s.cocktail + s.costume + s.table_setting : null,
+            comments: s?.comments ?? '',
+          };
+        }),
+    });
+  }
+
+  res.json({
+    competitionName: c.name,
+    status: c.status,
+    totalRounds: order.length,
+    members: order.map((id) => brief(usersById.get(id))),
+    rounds: rounds.reverse(),
+    leaderboard: computeLeaderboard(c),
+  });
+});
+
 router.get('/results', (req, res) => {
   if (req.competition.status !== 'results_published') {
     return res.status(409).json({ error: 'Results have not been published yet' });

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db, getCompetition, updateCompetition } from '../db.js';
-import { requireAdmin, isAdminEmail, checkScoresPassword } from '../auth.js';
+import { requireAdmin, requireLeadAdmin, isAdminEmail, checkScoresPassword } from '../auth.js';
 import { sendResultsEmail } from '../email.js';
 import {
   getRunningOrder,
@@ -59,16 +59,52 @@ function requireStatus(req, res, status, message) {
   return true;
 }
 
-router.get('/competitions/:id', (req, res) => {
-  const members = getUsersByIds(getRunningOrder(req.competition)).map((u) => ({
+function memberView(u) {
+  return {
     id: u.id,
     firstName: u.first_name,
     lastName: u.last_name,
     nickname: u.nickname,
     email: u.email,
     isAdmin: isAdminEmail(u.email),
-  }));
-  res.json({ competition: summary(req.competition), members });
+  };
+}
+
+router.get('/competitions/:id', (req, res) => {
+  const members = getUsersByIds(getRunningOrder(req.competition)).map(memberView);
+  const body = { competition: summary(req.competition), members };
+  // Secret observers exist only for the lead admin; nobody else gets them.
+  if (req.isLeadAdmin) {
+    body.observers = db
+      .prepare('SELECT * FROM users WHERE competition_id = ? AND observer = 1 ORDER BY id')
+      .all(req.competition.id)
+      .map(memberView);
+  }
+  res.json(body);
+});
+
+router.post('/competitions/:id/observers/:userId', requireLeadAdmin, (req, res) => {
+  const c = req.competition;
+  const userId = Number(req.params.userId);
+  if (!getRunningOrder(c).includes(userId)) {
+    return res.status(404).json({ error: "That person isn't in this competition" });
+  }
+  if (c.status === 'judging_complete' || c.status === 'results_published') {
+    return res.status(409).json({ error: 'Judging has finished' });
+  }
+  db.transaction(() => {
+    removeMember(c.id, userId);
+    db.prepare('UPDATE users SET competition_id = ?, observer = 1 WHERE id = ?').run(c.id, userId);
+  })();
+  res.json({ ok: true });
+});
+
+router.delete('/competitions/:id/observers/:userId', requireLeadAdmin, (req, res) => {
+  const info = db
+    .prepare('UPDATE users SET competition_id = NULL, observer = 0 WHERE id = ? AND competition_id = ? AND observer = 1')
+    .run(Number(req.params.userId), req.competition.id);
+  if (!info.changes) return res.status(404).json({ error: "That person isn't observing this competition" });
+  res.json({ ok: true });
 });
 
 router.put('/competitions/:id/running-order', (req, res) => {

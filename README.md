@@ -35,6 +35,10 @@ with an admin controlling the pace from their phone.
 - Once every contestant has been judged, admins see **See Final Scores**, review the leaderboard, and tap
   **Submit Results to Everyone** — this reveals the final leaderboard on every phone and emails everyone the
   results.
+- The lead admin (`LEAD_ADMIN_EMAIL`) can turn a member into a **secret observer** from the Admin Panel.
+  They drop out of the running order and the judges checklist, so nobody else sees them, and their phone
+  shows a live feed of every vote: who voted, the scores, comments and the running totals. Only the lead
+  admin sees the Observer buttons and the list of observers. Tap **Stop** to send them back to the picker.
 
 ## Tech stack
 
@@ -63,6 +67,7 @@ Open http://localhost:5173 and log in with an email from `ADMIN_EMAILS` plus `AD
 | `PORT` | Port the Node server listens on (default 3000) |
 | `DB_PATH` | Where the SQLite file lives (default `./data/woodhamptons.db`) |
 | `ADMIN_EMAILS` | Comma-separated list of admin emails, e.g. `ewilmoth@gmail.com,keiran@example.com` |
+| `LEAD_ADMIN_EMAIL` | The one admin who can see and manage secret observers. Must also be in `ADMIN_EMAILS` |
 | `ADMIN_PASSWORD` | Shared password every admin email must enter to log in. Admin login is refused if it's blank |
 | `SCORES_PASSWORD` | Password to view the cumulative scores while a game is running. If blank, nobody can view them mid-game |
 | `BACKUP_EMAIL` | Gets a backup email after every scored round: that round's scores and comments, plus the running totals. Leave blank to turn off |

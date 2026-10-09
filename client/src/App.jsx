@@ -6,6 +6,7 @@ import Home from './pages/Home.jsx';
 import MyScores from './pages/MyScores.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
+import ObserverFeed from './pages/ObserverFeed.jsx';
 import NavSidebar from './components/NavSidebar.jsx';
 
 const POLL_MS = 3500;
@@ -26,9 +27,12 @@ export default function App() {
   }, [loadMe]);
 
   const joined = !!(user?.profileComplete && user?.competitionId);
+  const observing = !!user?.isObserver;
+  // Observers watch a competition without playing in it, so they never poll game state.
+  const playing = joined && !observing;
 
   const refresh = useCallback(() => {
-    if (!joined) return;
+    if (!playing) return;
     api
       .state()
       .then(setState)
@@ -39,14 +43,14 @@ export default function App() {
           loadMe();
         }
       });
-  }, [joined, loadMe]);
+  }, [playing, loadMe]);
 
   useEffect(() => {
-    if (!joined) return;
+    if (!playing) return;
     refresh();
     const t = setInterval(refresh, POLL_MS);
     return () => clearInterval(t);
-  }, [joined, user?.competitionId, refresh]);
+  }, [playing, user?.competitionId, refresh]);
 
   async function logout() {
     await api.logout().catch(() => {});
@@ -95,6 +99,8 @@ export default function App() {
     );
   } else if (page === 'leaderboard' && user.isAdmin) {
     content = <Leaderboard user={user} />;
+  } else if (observing) {
+    content = <ObserverFeed onNotJoined={loadMe} />;
   } else if (!joined || joiningAnother) {
     content = (
       <JoinCompetition
@@ -131,7 +137,7 @@ export default function App() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         user={user}
-        joined={joined}
+        joined={playing}
         page={page}
         onNavigate={setPage}
         onLogout={logout}
