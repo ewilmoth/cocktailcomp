@@ -30,6 +30,7 @@ export const api = {
 
   openCompetitions: () => request('/me/open-competitions'),
   join: (payload) => post('/me/join', payload),
+  updateProfile: (payload) => request('/me/profile', { method: 'PUT', body: JSON.stringify(payload) }),
 
   state: () => request('/competition/state'),
   results: () => request('/competition/results'),

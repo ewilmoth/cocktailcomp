@@ -34,6 +34,11 @@ export default function NavSidebar({
             My Scores
           </button>
         )}
+        {user.profileComplete && (
+          <button className={`sidebar-link${page === 'profile' ? ' gold' : ''}`} onClick={() => go('profile')}>
+            Edit My Name
+          </button>
+        )}
         <AddToHomeScreen className="sidebar-link">📲 Add to Home Screen</AddToHomeScreen>
 
         {user.isAdmin && (

@@ -15,17 +15,34 @@ router.get('/open-competitions', (req, res) => {
   res.json({ competitions });
 });
 
-router.post('/join', (req, res) => {
+// Returns { names } or { error } for a body with firstName, lastName and nickname.
+function readNames(body) {
   const clean = (v) => String(v ?? '').trim();
-  const firstName = clean(req.body?.firstName);
-  const lastName = clean(req.body?.lastName);
-  const nickname = clean(req.body?.nickname);
-  if (!firstName || !lastName || !nickname) {
-    return res.status(400).json({ error: 'First name, surname and nickname are all required' });
+  const names = { firstName: clean(body?.firstName), lastName: clean(body?.lastName), nickname: clean(body?.nickname) };
+  const values = Object.values(names);
+  if (values.some((v) => !v)) return { error: 'First name, surname and nickname are all required' };
+  if (values.some((v) => v.length > MAX_NAME_LENGTH)) {
+    return { error: `Names must be ${MAX_NAME_LENGTH} characters or fewer` };
   }
-  if ([firstName, lastName, nickname].some((v) => v.length > MAX_NAME_LENGTH)) {
-    return res.status(400).json({ error: `Names must be ${MAX_NAME_LENGTH} characters or fewer` });
-  }
+  return { names };
+}
+
+router.put('/profile', (req, res) => {
+  const { names, error } = readNames(req.body);
+  if (error) return res.status(400).json({ error });
+  db.prepare('UPDATE users SET first_name = ?, last_name = ?, nickname = ? WHERE id = ?').run(
+    names.firstName,
+    names.lastName,
+    names.nickname,
+    req.user.id
+  );
+  res.json({ ok: true });
+});
+
+router.post('/join', (req, res) => {
+  const { names, error } = readNames(req.body);
+  if (error) return res.status(400).json({ error });
+  const { firstName, lastName, nickname } = names;
 
   const competitionId = Number(req.body?.competitionId);
   const competition = getCompetition(competitionId);

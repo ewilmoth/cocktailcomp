@@ -7,6 +7,7 @@ import MyScores from './pages/MyScores.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import ObserverFeed from './pages/ObserverFeed.jsx';
+import EditProfile from './pages/EditProfile.jsx';
 import NavSidebar from './components/NavSidebar.jsx';
 
 const POLL_MS = 3500;
@@ -99,6 +100,18 @@ export default function App() {
     );
   } else if (page === 'leaderboard' && user.isAdmin) {
     content = <Leaderboard user={user} />;
+  } else if (page === 'profile' && user.profileComplete) {
+    content = (
+      <EditProfile
+        user={user}
+        onCancel={() => setPage('home')}
+        onSaved={() => {
+          setPage('home');
+          loadMe();
+          refresh();
+        }}
+      />
+    );
   } else if (observing) {
     content = <ObserverFeed onNotJoined={loadMe} />;
   } else if (!joined || joiningAnother) {
